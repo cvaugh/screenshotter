@@ -25,6 +25,7 @@ screenshotter [--screen <id>] [--outdir <path>] [--list-screens] <rate> <unit>
 |`--screen`|Screenshots will be taken of this screen. Use `--list-screens` to find your desired screen's ID. Defaults to the primary screen.|
 |`--outdir`|Screenshots will be saved in this directory. Defaults to the current working directory.|
 |`--list-screens`|List available screens and exit.|
+|`--silent`|Do not print any output during normal operation.|
 
 ### Example
 

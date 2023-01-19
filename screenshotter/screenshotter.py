@@ -49,6 +49,8 @@ def parse_args():
                         help="the directory in which to save screenshots; by default, this is the current directory")
     parser.add_argument("--list-screens", dest="screens", action="store_true",
                         help="list available screens and exit")
+    parser.add_argument("--silent", dest="silent", action="store_true",
+                        help="do not print any output during normal operation")
 
     args = parser.parse_args()
 
@@ -85,13 +87,14 @@ def parse_args():
     return (
         delay,
         (screen.x - min(min([screen.x for screen in screens]), 0), screen.y, screen.width, screen.height),
-        os.getcwd() if outdir == "." else os.path.join(os.getcwd(), outdir)
+        os.getcwd() if outdir == "." else os.path.join(os.getcwd(), outdir),
+        args.silent
     )
 
 def main():
     global looping
 
-    delay, screen_bounds, outdir = parse_args()
+    delay, screen_bounds, outdir, silent = parse_args()
 
     if os.path.exists(outdir):
         if not os.path.isdir(outdir):
@@ -111,23 +114,25 @@ def main():
     try:
         line_length = 0
         while True:
-            line = "<{0}> [{1}] {2} screenshot{3} ({4})".format(
-                spinner[spinner_index % len(spinner)],
-                datetime.timedelta(seconds=int(time.time() - start_time)),
-                screenshot_count,
-                " " if screenshot_count == 1 else "s",
-                human_size(screenshot_bytes)
-            )
-            if len(line) < line_length:
-                line += " " * (line_length - len(line))
-            print(line, end="\r", flush=True)
-            line_length = len(line)
-            spinner_index += 1
+            if not silent:
+                line = "<{0}> [{1}] {2} screenshot{3} ({4})".format(
+                    spinner[spinner_index % len(spinner)],
+                    datetime.timedelta(seconds=int(time.time() - start_time)),
+                    screenshot_count,
+                    " " if screenshot_count == 1 else "s",
+                    human_size(screenshot_bytes)
+                )
+                if len(line) < line_length:
+                    line += " " * (line_length - len(line))
+                print(line, end="\r", flush=True)
+                line_length = len(line)
+                spinner_index += 1
             time.sleep(0.2)
     except KeyboardInterrupt:
         looping = False
         e.set()
-        print("Process terminated by user after", str(datetime.timedelta(seconds=int(time.time() - start_time))))
+        if not silent:
+            print("Process terminated by user after", str(datetime.timedelta(seconds=int(time.time() - start_time))))
         exit()
 
 if __name__ == "__main__":
