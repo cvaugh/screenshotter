@@ -10,7 +10,10 @@ import pyautogui
 import screeninfo
 from PIL import ImageGrab
 
+ImageGrab.grab = partial(ImageGrab.grab, all_screens=True)
+
 valid_units = ["seconds", "minutes", "hours", "s", "m", "h"]
+screens = screeninfo.get_monitors()
 
 looping = True
 screenshot_count = 0
@@ -35,8 +38,7 @@ def human_size(bytes, units=['B','KB','MB','GB','TB', 'PB', 'EB']):
     """
     return str(bytes) + " " + units[0] if bytes < 1024 else human_size(bytes >> 10, units[1:])
 
-def main():
-    global looping
+def parse_args():
     parser = argparse.ArgumentParser(description="Take <rate> screenshots per <unit> of the specified screen")
     parser.add_argument("rate", type=int, help="the rate at which to take screenshots")
     parser.add_argument("unit", metavar="unit", type=str.lower, help="the unit of the rate argument; must be one of " + str(valid_units),
@@ -49,8 +51,6 @@ def main():
                         help="list available screens and exit")
 
     args = parser.parse_args()
-
-    screens = screeninfo.get_monitors()
 
     if(args.screens):
         if(len(screens) == 0):
@@ -70,42 +70,38 @@ def main():
         print("error: screen must be one of", [i for i in range(len(screens))], file=sys.stderr)
         exit()
 
-    ImageGrab.grab = partial(ImageGrab.grab, all_screens=True)
-
     rate = args.rate[0] if isinstance(args.rate, list) else args.rate
+
     if args.unit == "s" or args.unit == "seconds":
-        unit = "s"
+        delay = 1 / rate
     elif args.unit == "m" or args.unit == "minutes":
-        unit = "m"
+        delay = 60 / rate
     elif args.unit == "h" or args.unit == "hours":
-        unit = "h"
+        delay = 3600 / rate
+
     screen = screens[screen_id]
     outdir = args.outdir[0] if isinstance(args.outdir, list) else args.outdir
 
-    if outdir == ".":
-        outdir = os.getcwd()
-    else:
-        outdir = os.path.join(os.getcwd(), outdir)
+    return (
+        delay,
+        (screen.x - min(min([screen.x for screen in screens]), 0), screen.y, screen.width, screen.height),
+        os.getcwd() if outdir == "." else os.path.join(os.getcwd(), outdir)
+    )
+
+def main():
+    global looping
+
+    delay, screen_bounds, outdir = parse_args()
 
     if os.path.exists(outdir):
         if not os.path.isdir(outdir):
             print("error: outdir path is a file", file=sys.stderr)
+            exit()
     else:
         os.mkdir(outdir)
 
-    screen_bounds = (screen.x - min(min([screen.x for screen in screens]), 0), screen.y, screen.width, screen.height)
-
-    if unit == "s":
-        delay = 1 / rate
-    elif unit == "m":
-        delay = 60 / rate
-    elif unit == "h":
-        delay = 3600 / rate
-
     e = threading.Event()
-
     start_time = time.time()
-
     thread = threading.Thread(target=screenshot_loop, args=(screen_bounds, outdir, delay, e))
     thread.start()
 
@@ -115,8 +111,13 @@ def main():
     try:
         line_length = 0
         while True:
-            line = "<" + spinner[spinner_index % len(spinner)] + "> [" + str(datetime.timedelta(seconds=int(time.time() - start_time))) + "] "
-            line += str(screenshot_count) + " screenshot" + (" " if screenshot_count == 1 else "s") + " (" + human_size(screenshot_bytes) + ")"
+            line = "<{0}> [{1}] {2} screenshot{3} ({4})".format(
+                spinner[spinner_index % len(spinner)],
+                datetime.timedelta(seconds=int(time.time() - start_time)),
+                screenshot_count,
+                " " if screenshot_count == 1 else "s",
+                human_size(screenshot_bytes)
+            )
             if len(line) < line_length:
                 line += " " * (line_length - len(line))
             print(line, end="\r", flush=True)
