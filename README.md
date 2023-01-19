@@ -4,13 +4,11 @@ A simple utility for automatically taking full-screen screenshots at a fixed rat
 
 ## Installation
 
-Note that `screenshotter` requires [Python 3](https://www.python.org/downloads/).
+```
+python -m pip install screenshotter
+```
 
-```
-git clone https://github.com/cvaugh/screenshotter.git
-cd screenshotter
-pip install -e .
-```
+Note that `screenshotter` requires [Python 3](https://www.python.org/downloads/).
 
 ## Usage
 
